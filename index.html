@@ -347,51 +347,57 @@ function buildExportCanvas(cb){
   cb(cvs);
 }
 
+/* â”€â”€ Modal (usa Blob URL â€” sem limite de tamanho no iOS) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+function showImgModal(blob){
+  var blobURL=URL.createObjectURL(blob);
+  var ov=document.createElement("div");
+  ov.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;";
+  var msg=document.createElement("p");
+  msg.style.cssText="color:#fff;font-size:13px;text-align:center;max-width:320px;line-height:1.6;";
+  msg.textContent="iPhone: pressione e segure a imagem \u2192 Salvar na Fotos.\nPC: clique direito \u2192 Copiar imagem.";
+  var img=document.createElement("img");
+  img.src=blobURL;
+  img.style.cssText="max-width:100%;max-height:60dvh;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.5);display:block;";
+  img.addEventListener("click",function(e){e.stopPropagation();});
+  var close=document.createElement("button");
+  close.textContent="Fechar";
+  close.style.cssText="background:#fff;color:#111;border:none;border-radius:8px;padding:10px 28px;font-size:13px;font-weight:700;cursor:pointer;";
+  function closeIt(){URL.revokeObjectURL(blobURL);if(ov.parentNode)ov.parentNode.removeChild(ov);}
+  close.addEventListener("click",function(e){e.stopPropagation();closeIt();});
+  ov.addEventListener("click",closeIt);
+  ov.appendChild(msg);ov.appendChild(img);ov.appendChild(close);
+  document.body.appendChild(ov);
+}
+
 /* â”€â”€ Download â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 $i("dl-btn").addEventListener("click",function(){
   buildExportCanvas(function(cvs){
-    var a=document.createElement("a");
-    a.download="ppplayground-1920.png";
-    a.href=cvs.toDataURL("image/png");
-    a.click();
+    cvs.toBlob(function(blob){
+      var url=URL.createObjectURL(blob);
+      var a=document.createElement("a");
+      a.download="ppplayground-1920.png";
+      a.href=url;
+      a.click();
+      setTimeout(function(){URL.revokeObjectURL(url);},2000);
+    },"image/png");
   });
 });
 
 /* â”€â”€ Copy â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-function showImgModal(dataURL){
-  var ov=document.createElement("div");
-  ov.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px;cursor:pointer;";
-  var msg=document.createElement("p");
-  msg.style.cssText="color:#fff;font-size:13px;text-align:center;max-width:340px;line-height:1.5;pointer-events:none;";
-  msg.textContent="Clique com o botÃ£o direito na imagem para copiar. No iPhone: pressione e segure para salvar.";
-  var img=document.createElement("img");
-  img.src=dataURL;
-  img.style.cssText="max-width:100%;max-height:65dvh;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.6);";
-  img.addEventListener("click",function(e){e.stopPropagation();});
-  var close=document.createElement("button");
-  close.textContent="Fechar";
-  close.style.cssText="background:#fff;color:#111;border:none;border-radius:8px;padding:10px 24px;font-size:13px;font-weight:700;cursor:pointer;";
-  ov.appendChild(msg);ov.appendChild(img);ov.appendChild(close);
-  ov.addEventListener("click",function(){document.body.removeChild(ov);});
-  close.addEventListener("click",function(){document.body.removeChild(ov);});
-  document.body.appendChild(ov);
-}
-
 $i("cp-btn").addEventListener("click",function(){
   buildExportCanvas(function(cvs){
-    var dataURL=cvs.toDataURL("image/png");
-    if(navigator.clipboard&&window.ClipboardItem){
-      cvs.toBlob(function(blob){
+    cvs.toBlob(function(blob){
+      if(navigator.clipboard&&window.ClipboardItem){
         navigator.clipboard.write([new ClipboardItem({"image/png":blob})])
           .then(function(){
             var b=$i("cp-btn"),o=b.textContent;
             b.textContent="Copiado!";setTimeout(function(){b.textContent=o;},1500);
           })
-          .catch(function(){showImgModal(dataURL);});
-      },"image/png");
-    }else{
-      showImgModal(dataURL);
-    }
+          .catch(function(){showImgModal(blob);});
+      }else{
+        showImgModal(blob);
+      }
+    },"image/png");
   });
 });
 
